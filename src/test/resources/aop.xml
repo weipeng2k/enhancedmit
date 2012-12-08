@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd"
+	default-autowire="byName">
+	<bean
+		class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+		<property name="beanNames">
+			<list>
+				<value>clazz</value>
+				<value>interfaces</value>
+			</list>
+		</property>
+		<property name="interceptorNames">
+			<list>
+				<value>methodInvocationEnhancementInterceptor</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="clazz" class="com.murdock.tools.enhancedmit.test.Clazz" />
+	
+	<bean id="interfaces" class="com.murdock.tools.enhancedmit.test.InterfaceImpl" />
+
+	<bean id="methodInvocationEnhancementInterceptor"
+		class="com.murdock.tools.enhancedmit.intercepter.MethodInvocationEnhancementInterceptor" />
+
+	<bean id="methodInvocationManager"
+		class="com.murdock.tools.enhancedmit.impl.MethodInvocationManagerImpl" />
+
+	<bean id="handlerManager" class="com.murdock.tools.enhancedmit.impl.HandlerManagerImpl" />
+	
+	<bean id="invocationStatsComponent"
+		class="com.murdock.tools.invocationstats.component.DefaultInvocationStatsComponentSupport" />
+
+	<bean id="invocationStatsService"
+		class="com.murdock.tools.invocationstats.InvocationStatsServiceImpl" />
+
+	<bean
+		class="com.murdock.tools.enhancedmit.handler.SystemPrintAfterExecutionHandler" />
+
+	<bean
+		class="com.murdock.tools.enhancedmit.handler.SystemPrintBeforeExecutionHandler" />
+
+	<bean
+		class="com.murdock.tools.enhancedmit.handler.SystemPrintExceptionThrownHandler" />
+		
+	<bean class="com.murdock.tools.enhancedmit.handler.SystemPrint2BeforeExecutionHandler" />
+	
+	<bean class="com.murdock.tools.enhancedmit.handler.InvocationCostTimeAfterExecutionHandler" />
+	
+	<bean class="com.murdock.tools.enhancedmit.handler.InvocationCostTimeBeforeExecutionHandler" />
+	
+	<bean class="com.murdock.tools.enhancedmit.handler.InvocationCostTimeExceptionThrownHandler" />
+	
+	<bean class="com.murdock.tools.invocationstats.component.handler.InvocationStatsAfterExecutionHandler" />
+	
+	<bean class="com.murdock.tools.invocationstats.component.handler.InvocationStatsExceptionThrownHandler" />
+	
+	<bean class="com.murdock.tools.invocationstats.component.handler.InvocationStatsBeforeExecutionHandler" />
+	
+</beans>
