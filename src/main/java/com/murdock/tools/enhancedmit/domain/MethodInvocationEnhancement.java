@@ -83,11 +83,12 @@ public class MethodInvocationEnhancement {
 
     /**
      * <pre>
-     * 方法执行前进行执行
+     * 方法执行前，进行执行，参数中的methodInvocation传递给当前增强的前置处理器中
      * 
      * </pre>
      * 
      * @param methodInvocation
+     *            方法调用参数
      */
     public void beforeExecution(MethodInvocation methodInvocation) {
 	if (beforeExecutionHandlers != null) {
@@ -102,11 +103,100 @@ public class MethodInvocationEnhancement {
 	}
     }
 
+    /**
+     * <pre>
+     * 方法执行后，进行执行，参数中的methodInvocation传递给当前增强的后置处理器中，将结果传递给该方法
+     * 
+     * </pre>
+     * 
+     * @param methodInvocation
+     *            方法调用参数
+     * @param result
+     *            调用结果
+     */
+    public void afterExecution(MethodInvocation methodInvocation, Object result) {
+	if (afterExecutionHandlers != null) {
+	    for (AfterExecutionHandler aeh : afterExecutionHandlers) {
+		try {
+		    aeh.handle(methodInvocation, result);
+		} catch (Exception ex) {
+		    // Ignore proceed, just log it.
+		    log.error("handler execution got exception.", ex);
+		}
+	    }
+	}
+    }
+
+    /**
+     * <pre>
+     * 方法抛出异常后，进行执行，参数中的methodInvocation传递给当前增强的后置处理器中，将异常传递给该方法
+     * 
+     * </pre>
+     * 
+     * @param methodInvocation
+     *            方法调用参数
+     * @param exception
+     *            调用异常
+     */
+    public void exceptionThrown(MethodInvocation methodInvocation,
+	    Throwable exception) {
+	if (exceptionThrownHandlers != null) {
+	    for (ExceptionThrownHandler eth : exceptionThrownHandlers) {
+		try {
+		    eth.handle(methodInvocation, exception);
+		} catch (Exception ex) {
+		    // Ignore proceed, just log it.
+		    log.error("handler execution got exception.", ex);
+		}
+	    }
+	}
+    }
+
+    // -----------Getters and Setters------------//
+
+    public String getId() {
+	return id;
+    }
+
+    public void setId(String id) {
+	this.id = id;
+    }
+
+    public List<BeforeExecutionHandler> getBeforeExecutionHandlers() {
+	return beforeExecutionHandlers;
+    }
+
+    public void setBeforeExecutionHandlers(
+	    List<BeforeExecutionHandler> beforeExecutionHandlers) {
+	this.beforeExecutionHandlers = beforeExecutionHandlers;
+    }
+
+    public List<AfterExecutionHandler> getAfterExecutionHandlers() {
+	return afterExecutionHandlers;
+    }
+
+    public void setAfterExecutionHandlers(
+	    List<AfterExecutionHandler> afterExecutionHandlers) {
+	this.afterExecutionHandlers = afterExecutionHandlers;
+    }
+
+    public List<ExceptionThrownHandler> getExceptionThrownHandlers() {
+	return exceptionThrownHandlers;
+    }
+
+    public void setExceptionThrownHandlers(
+	    List<ExceptionThrownHandler> exceptionThrownHandlers) {
+	this.exceptionThrownHandlers = exceptionThrownHandlers;
+    }
+
+    // -----------Getters and Setters------------//
+
     @Override
     public String toString() {
-	return "MethodInvocationEnhancement [beforeExecutionHandlers="
-		+ beforeExecutionHandlers + ", afterExecutionHandlers="
-		+ afterExecutionHandlers + ", exceptionThrownHandlers="
-		+ exceptionThrownHandlers + "]";
+	return "MethodInvocationEnhancement [id=" + id
+		+ ", beforeExecutionHandlers=" + beforeExecutionHandlers
+		+ ", afterExecutionHandlers=" + afterExecutionHandlers
+		+ ", exceptionThrownHandlers=" + exceptionThrownHandlers + "]";
     }
+
 }
