@@ -4,14 +4,10 @@
 package com.murdock.tools.enhancedmit.impl;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.Assert;
 
 import com.murdock.tools.enhancedmit.HandlerManager;
@@ -25,87 +21,41 @@ import com.murdock.tools.enhancedmit.domain.extension.AfterExecutionHandler;
 import com.murdock.tools.enhancedmit.domain.extension.BeforeExecutionHandler;
 import com.murdock.tools.enhancedmit.domain.extension.ExceptionThrownHandler;
 import com.murdock.tools.enhancedmit.enums.CapabilityTypeEnum;
+import com.murdock.tools.enhancedmit.util.MethodNameUtils;
 
 /**
  * <pre>
  * 方法调用增强的实现，主要是获取方法的增强
  * 
+ * 这里是重构的入口，简单的说就是有方法ID列表的概念
+ * 
+ * 
+ * Method *-------1 MethodID *---------1 MethodInvocationEnhancement
+ * 多个方法可以共享一个方法Id，说明这里是逻辑概念；
+ * 一个方法Id可以找到一个增强；
+ * 而这个增强可能应对多个方法ID。
+ * 
+ * 而MethodID形成一座桥链接方法的其增强，提供了足够的弹性。
+ * 
  * </pre>
  * 
  * @author weipeng
  */
-public class MethodInvocationManagerImpl implements MethodInvocationManager, BeanPostProcessor {
+public class MethodInvocationManagerImpl implements MethodInvocationManager {
 
-    private static Log                                                     log                = LogFactory.getLog(MethodInvocationManager.class);
+    private static Log                                                     log                = LogFactory.getLog(Handler.class);
     /**
      * Handler管理
      */
     private HandlerManager                                                 handlerManager;
     /**
-     * 缓存增强
+     * 方法到方法ID
      */
-    private ConcurrentHashMap<MethodIdentity, MethodInvocationEnhancement> cachedEnhancements = new ConcurrentHashMap<MethodIdentity, MethodInvocationEnhancement>();
-
-    /*
-     * (non-Javadoc)
-     * @see com.murdock.tools.enhancedmit.MethodInvocationManager#beforeExecution
-     * (org.aopalliance.intercept.MethodInvocation, com.murdock.tools.enhancedmit.domain.MethodInvocationEnhancement)
+    private ConcurrentHashMap<Method, String>                              method2Id          = new ConcurrentHashMap<Method, String>();
+    /**
+     * 方法ID到增强
      */
-    @Override
-    public void beforeExecution(MethodInvocation methodInvocation, MethodInvocationEnhancement enhancement) {
-        if (enhancement != null) {
-            for (BeforeExecutionHandler handler : enhancement.getBeforeExecutionHandlers()) {
-                try {
-                    handler.handle(methodInvocation);
-                } catch (Exception ex) {
-                    // Ignore proceed, just log it.
-                    log.error("handler execution got exception.", ex);
-                }
-            }
-        }
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see com.murdock.tools.enhancedmit.MethodInvocationManager#afterExecution(
-     * org.aopalliance.intercept.MethodInvocation, java.lang.Object,
-     * com.murdock.tools.enhancedmit.domain.MethodInvocationEnhancement)
-     */
-    @Override
-    public void afterExecution(MethodInvocation methodInvocation, Object result, MethodInvocationEnhancement enhancement) {
-        if (enhancement != null) {
-            for (AfterExecutionHandler handler : enhancement.getAfterExecutionHandlers()) {
-                try {
-                    handler.handle(methodInvocation, result);
-                } catch (Exception ex) {
-                    // Ignore proceed, just log it.
-                    log.error("handler execution got exception.", ex);
-                }
-            }
-        }
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see com.murdock.tools.enhancedmit.MethodInvocationManager#exceptionThrown
-     * (org.aopalliance.intercept.MethodInvocation, java.lang.Throwable,
-     * com.murdock.tools.enhancedmit.domain.MethodInvocationEnhancement)
-     */
-    @Override
-    public void exceptionThrown(MethodInvocation methodInvocation, Throwable exception,
-                                MethodInvocationEnhancement enhancement) {
-
-        if (enhancement != null) {
-            for (ExceptionThrownHandler handler : enhancement.getExceptionThrownHandlers()) {
-                try {
-                    handler.handle(methodInvocation, exception);
-                } catch (Exception ex) {
-                    // Ignore proceed, just log it.
-                    log.error("handler execution got exception.", ex);
-                }
-            }
-        }
-    }
+    private ConcurrentHashMap<String, MethodInvocationEnhancement>         id2Enhancement     = new ConcurrentHashMap<String, MethodInvocationEnhancement>();
 
     /*
      * (non-Javadoc)
@@ -113,13 +63,15 @@ public class MethodInvocationManagerImpl implements MethodInvocationManager, Bea
      */
     @Override
     public MethodInvocationEnhancement fetchEnhancement(Method method) {
-        MethodInvocationEnhancement methodInvocationEnhancement = null;
-        MethodIdentity mi = encodeMethod(method);
-        if (mi != null) {
-            methodInvocationEnhancement = cachedEnhancements.get(mi);
+        if (method != null) {
+            String methodId = method2Id.get(method);
+
+            if (methodId != null) {
+                return id2Enhancement.get(methodId);
+            }
         }
 
-        return methodInvocationEnhancement;
+        return null;
     }
 
     /**
@@ -157,6 +109,8 @@ public class MethodInvocationManagerImpl implements MethodInvocationManager, Bea
      * <pre>
      * 生成增强，该方法必须是实现的方法
      * 
+     * LOG时，将方法全部输出，可以看到增强的方法列表
+     * 
      * </pre>
      * 
      * @param method
@@ -170,7 +124,22 @@ public class MethodInvocationManagerImpl implements MethodInvocationManager, Bea
 
             // 有增强注解，分析注解
             if (enhancement != null) {
+                if (log.isInfoEnabled()) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("[Enhanced] method======> ").append(method).append(" [Begin]");
+                    log.info(sb.toString());
+                }
+
                 methodInvocationEnhancement = new MethodInvocationEnhancement();
+
+                // 如果当前注解是默认的话，使用默认ID生成模式
+                if (Enhancement.DEFAULT_METHOD_ID.equals(enhancement.id())) {
+                    methodInvocationEnhancement.setId(MethodNameUtils.getMethodSignature(method.getName(),
+                                                                                         method.getParameterTypes()));
+                } else {
+                    methodInvocationEnhancement.setId(enhancement.id());
+                }
+
                 Capability[] capabilities = enhancement.value();
 
                 if (capabilities != null) {
@@ -193,6 +162,12 @@ public class MethodInvocationManagerImpl implements MethodInvocationManager, Bea
                                                 capability.exceptionThrownHandlerName(), ExceptionThrownHandler.class);
                     }
                 }
+
+                if (log.isInfoEnabled()) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("[Enhanced] method======> ").append(method).append(" [Done]");
+                    log.info(sb.toString());
+                }
             }
         }
 
@@ -201,22 +176,10 @@ public class MethodInvocationManagerImpl implements MethodInvocationManager, Bea
 
     /*
      * (non-Javadoc)
-     * @see org.springframework.beans.factory.config.BeanPostProcessor# postProcessAfterInitialization(java.lang.Object,
-     * java.lang.String)
+     * @see com.murdock.tools.enhancedmit.MethodInvocationManager#analysisAndCreateEnhancement(java.lang.Object)
      */
     @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-
-        return bean;
-    }
-
-    /*
-     * parameterTypes (non-Javadoc)
-     * @see org.springframework.beans.factory.config.BeanPostProcessor#
-     * postProcessBeforeInitialization(java.lang.Object, java.lang.String)
-     */
-    @Override
-    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+    public void analysisAndCreateEnhancement(Object bean) {
         if (bean != null) {
             Class<?> clazz = bean.getClass();
             // Mark了增强实现标记，解析
@@ -226,103 +189,12 @@ public class MethodInvocationManagerImpl implements MethodInvocationManager, Bea
                     for (Method method : methods) {
                         MethodInvocationEnhancement enhancement = generateEnhancement(method);
                         if (enhancement != null) {
-                            MethodIdentity mi = encodeMethod(method);
-                            if (mi != null) {
-                                cachedEnhancements.put(mi, enhancement);
-                            }
+                            method2Id.put(method, enhancement.getId());
+                            id2Enhancement.put(enhancement.getId(), enhancement);
                         }
                     }
                 }
             }
-        }
-
-        return bean;
-    }
-
-    /**
-     * <pre>
-     * 将一个方法转义为方法标识
-     * 
-     * </pre>
-     * 
-     * @param method
-     * @return
-     */
-    private static final MethodIdentity encodeMethod(Method method) {
-        if (method != null) {
-            return new MethodIdentity(method.getName(), method.getParameterTypes());
-        }
-
-        return null;
-    }
-
-    /**
-     * <pre>
-     * 方法标识，使用一个方法名称和参数类型来标识一个方法，外部不用知晓EhancedMIT如何表示一个方法
-     * 
-     * </pre>
-     * 
-     * @author weipeng
-     */
-    static final class MethodIdentity {
-
-        /**
-         * 方法名称
-         */
-        private String     methodName;
-        /**
-         * 类型列表名称
-         */
-        private Class<?>[] parameterTypes;
-
-        public MethodIdentity(){
-
-        }
-
-        public MethodIdentity(String methodName, Class<?>[] parameterTypes){
-            this.methodName = methodName;
-            this.parameterTypes = parameterTypes;
-        }
-
-        // -------------------Getter and Setters------------------//
-
-        public String getMethodName() {
-            return methodName;
-        }
-
-        public void setMethodName(String methodName) {
-            this.methodName = methodName;
-        }
-
-        public Class<?>[] getParameterTypes() {
-            return parameterTypes;
-        }
-
-        public void setParameterTypes(Class<?>[] parameterTypes) {
-            this.parameterTypes = parameterTypes;
-        }
-
-        // -------------------Getter and Setters------------------//
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((methodName == null) ? 0 : methodName.hashCode());
-            result = prime * result + Arrays.hashCode(parameterTypes);
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null) return false;
-            if (getClass() != obj.getClass()) return false;
-            MethodIdentity other = (MethodIdentity) obj;
-            if (methodName == null) {
-                if (other.methodName != null) return false;
-            } else if (!methodName.equals(other.methodName)) return false;
-            if (!Arrays.equals(parameterTypes, other.parameterTypes)) return false;
-            return true;
         }
 
     }
