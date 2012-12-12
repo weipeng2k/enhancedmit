@@ -148,8 +148,17 @@ public class HandlerManagerImpl implements HandlerManager, ApplicationContextAwa
      */
     static final class HandlerHolder {
 
+        /**
+         * Handler
+         */
         Handler handler;
+        /**
+         * Handler名称
+         */
         String  name;
+        /**
+         * 是否默认
+         */
         boolean isDefault;
     }
 }
