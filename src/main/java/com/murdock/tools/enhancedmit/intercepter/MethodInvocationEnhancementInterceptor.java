@@ -22,7 +22,7 @@ public class MethodInvocationEnhancementInterceptor implements MethodInterceptor
     /**
      * 方法调用管理
      */
-    private MethodInvocationManager                                methodInvocationManager;
+    private MethodInvocationManager methodInvocationManager;
 
     /*
      * (non-Javadoc)
@@ -30,34 +30,21 @@ public class MethodInvocationEnhancementInterceptor implements MethodInterceptor
      */
     @Override
     public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+        // 获取当前方法的增强
         MethodInvocationEnhancement enhancement = methodInvocationManager.fetchEnhancement(methodInvocation.getMethod());
-        // MethodInvocationEnhancement enhancement = cachedEnhancements.get(calledMethod);
-        // if (enhancement == null) {
-        // // 获取链接点的对象
-        // Object joinpoint = methodInvocation.getThis();
-        // // 需要获取增强的方法，当然，如果存在joinpoint的情况下(不为static方法)
-        // Method needFetchMethod = calledMethod;
-        // if (joinpoint != null) {
-        // needFetchMethod = joinpoint.getClass().getMethod(methodInvocation.getMethod().getName(),
-        // methodInvocation.getMethod().getParameterTypes());
-        // }
-        // enhancement = methodInvocationManager.fetchEnhancement(needFetchMethod);
-        //
-        // cachedEnhancements.putIfAbsent(calledMethod, enhancement);
-        // }
 
         Object result = null;
         try {
             if (enhancement != null) {
-                methodInvocationManager.beforeExecution(methodInvocation, enhancement);
+                enhancement.beforeExecution(methodInvocation);
             }
             result = methodInvocation.proceed();
             if (enhancement != null) {
-                methodInvocationManager.afterExecution(methodInvocation, result, enhancement);
+                enhancement.afterExecution(methodInvocation, result);
             }
         } catch (Throwable exception) {
             if (enhancement != null) {
-                methodInvocationManager.exceptionThrown(methodInvocation, exception, enhancement);
+                enhancement.exceptionThrown(methodInvocation, exception);
             }
             throw exception;
         }
