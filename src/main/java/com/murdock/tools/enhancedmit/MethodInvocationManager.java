@@ -5,8 +5,6 @@ package com.murdock.tools.enhancedmit;
 
 import java.lang.reflect.Method;
 
-import org.aopalliance.intercept.MethodInvocation;
-
 import com.murdock.tools.enhancedmit.domain.MethodInvocationEnhancement;
 
 /**
@@ -24,43 +22,6 @@ import com.murdock.tools.enhancedmit.domain.MethodInvocationEnhancement;
  * 
  */
 public interface MethodInvocationManager {
-	/**
-	 * <pre>
-	 * 方法调用前执行增强
-	 * 
-	 * </pre>
-	 * 
-	 * @param methodInvocation
-	 * @param enhancement
-	 */
-	void beforeExecution(MethodInvocation methodInvocation,
-			MethodInvocationEnhancement enhancement);
-
-	/**
-	 * <pre>
-	 * 方法调用后进行的增强
-	 * 
-	 * </pre>
-	 * 
-	 * @param methodInvocation
-	 * @param result
-	 * @param enhancement
-	 */
-	void afterExecution(MethodInvocation methodInvocation, Object result,
-			MethodInvocationEnhancement enhancement);
-
-	/**
-	 * <pre>
-	 * 异常抛出后进行的增强
-	 * 
-	 * </pre>
-	 * 
-	 * @param methodInvocation
-	 * @param exception
-	 * @param enhancement
-	 */
-	void exceptionThrown(MethodInvocation methodInvocation,
-			Throwable exception, MethodInvocationEnhancement enhancement);
 
 	/**
 	 * <pre>
@@ -78,4 +39,23 @@ public interface MethodInvocationManager {
 	 * @return 方法增强
 	 */
 	MethodInvocationEnhancement fetchEnhancement(Method method);
+	
+	/**
+     * <pre>
+     * 传入一个Spring Bean，分析并进行增强的生成工作，分析的工作如下：
+     * 
+     * 1.首先看当前的Bean是否有EnhancedImplementation的注解标注；
+     * 2.如果有的话，分析所有的方法，针对每个方法进行处理；
+     * 3.首先根据method，生成一个MethodInvocationEnhancement；
+     * 4.查询method上的注解，即@Enhancement，分析Enhancement所标注的before、after和exception的Handler；
+     * 5.将对应的Handler设置到MethodInvocationEnhancement中。
+     * 
+     * 下次，在调用fetchEnhancement，将会快速返回。
+     * 
+     * </pre>
+     * 
+     * @param bean
+     */
+    void analysisAndCreateEnhancement(Object bean);
+    
 }
