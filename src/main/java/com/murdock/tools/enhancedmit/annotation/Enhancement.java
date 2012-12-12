@@ -20,16 +20,35 @@ import java.lang.annotation.Target;
  * </pre>
  * 
  * @author weipeng
- * 
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @Documented
 public @interface Enhancement {
-	/**
-	 * 增强的能力列表
-	 * 
-	 * @return
-	 */
-	Capability[] value();
+
+    static final String DEFAULT_METHOD_ID = "default";
+
+    /**
+     * <pre>
+     * 方法的ID
+     * 
+     * 注意：
+     * 默认的生成规则是：方法名_参数短类名1_参数短类名2_
+     * 比如
+     * echo(String name)，默认的KEY为：echo_String_
+     * dummy()，默认的KEY为：dummy_
+     * add(int delta)，默认的KEY为：add_int_
+     * 
+     * </pre>
+     * 
+     * @return
+     */
+    String id() default DEFAULT_METHOD_ID;
+
+    /**
+     * 增强的能力列表
+     * 
+     * @return
+     */
+    Capability[] value();
 }
