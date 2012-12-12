@@ -107,7 +107,6 @@ public class MethodInvocationManagerTest extends
 			}
 
 		};
-		methodInvocationManager.beforeExecution(info, enhancement);
 	}
 
 	class FetchJob implements Runnable {
