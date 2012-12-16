@@ -30,10 +30,11 @@ import com.murdock.tools.enhancedmit.util.MethodNameUtils;
  * 这里是重构的入口，简单的说就是有方法ID列表的概念
  * 
  * 
- * Method *-------1 MethodID *---------1 MethodInvocationEnhancement
+ * Method ---*-------1--- MethodID---1---------1--- MethodInvocationEnhancement
  * 多个方法可以共享一个方法Id，说明这里是逻辑概念；
- * 一个方法Id可以找到一个增强；
- * 而这个增强可能应对多个方法ID。
+ * 一个方法Id可以找到一个增强。
+ * 
+ * 这里还是要1对1，要重新改回来，否则会有问题。
  * 
  * 而MethodID形成一座桥链接方法的其增强，提供了足够的弹性。
  * 

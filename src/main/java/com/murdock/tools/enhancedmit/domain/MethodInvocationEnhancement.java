@@ -34,9 +34,12 @@ import com.murdock.tools.enhancedmit.enums.CapabilityTypeEnum;
  */
 public class MethodInvocationEnhancement {
 
+    private static Log log = LogFactory.getLog(Handler.class);
+    /**
+     * 默认的列表数量
+     */
     private static final int DEFAULT_HANDLERS_SIZE = CapabilityTypeEnum
 	    .values().length;
-    private static Log log = LogFactory.getLog(Handler.class);
     /**
      * 方法的ID，这里用该属性来标识一个方法调用增强
      */
